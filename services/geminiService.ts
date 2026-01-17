@@ -2,10 +2,8 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-const API_KEY = process.env.API_KEY;
-
 export const analyzeFace = async (base64Image: string): Promise<AnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const base64Data = base64Image.split(',')[1] || base64Image;
 
@@ -54,7 +52,7 @@ export const analyzeFace = async (base64Image: string): Promise<AnalysisResult> 
 };
 
 export const speakAnalysis = async (text: string): Promise<void> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
