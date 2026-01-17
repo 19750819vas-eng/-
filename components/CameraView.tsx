@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 interface CameraViewProps {
@@ -16,17 +15,32 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
     let stream: MediaStream | null = null;
 
     const startCamera = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError("Камера не поддерживается вашим браузером. Убедитесь, что используете HTTPS.");
+        return;
+      }
+
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+          video: { 
+            facingMode: 'user', 
+            width: { ideal: 1280 }, 
+            height: { ideal: 720 } 
+          },
+          audio: false 
         });
+        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          setIsActive(true);
+          // Важно: на мобильных устройствах требуется play() и playsInline
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play().catch(e => console.error("Ошибка воспроизведения видео:", e));
+            setIsActive(true);
+          };
         }
-      } catch (err) {
-        setError("Доступ к камере запрещен или камера недоступна.");
-        console.error(err);
+      } catch (err: any) {
+        console.error("Camera Error:", err);
+        setError("Нет доступа к камере. Проверьте разрешения в браузере.");
       }
     };
 
@@ -40,7 +54,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
   }, []);
 
   const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
+    if (videoRef.current && canvasRef.current && isActive) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
@@ -49,56 +63,54 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         onCapture(dataUrl);
       }
     }
-  }, [onCapture]);
+  }, [onCapture, isActive]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4">
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl glass-card">
-        <div className="p-4 flex justify-between items-center border-b border-white/10">
-          <h3 className="text-xl font-bold text-white">Захват изображения</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-            <i className="fas fa-times text-2xl"></i>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0f1e] shadow-2xl flex flex-col">
+        <div className="p-5 flex justify-between items-center border-b border-white/5 bg-slate-900/40">
+          <div>
+            <h3 className="text-xl font-bold text-white">Камера</h3>
+            <p className="text-xs text-slate-500">Посмотрите в объектив</p>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white">
+            <i className="fas fa-times"></i>
           </button>
         </div>
 
-        <div className="relative aspect-video bg-gray-900 overflow-hidden">
+        <div className="relative aspect-video bg-black flex items-center justify-center">
           {error ? (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-              <i className="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-              <p className="text-red-400 font-medium">{error}</p>
-              <button 
-                onClick={onClose}
-                className="mt-6 px-6 py-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors"
-              >
-                Вернуться
-              </button>
-            </div>
+            <div className="p-10 text-center text-red-400">{error}</div>
           ) : (
             <>
               <video 
                 ref={videoRef} 
                 autoPlay 
                 playsInline 
-                className="w-full h-full object-cover"
+                muted 
+                className={`w-full h-full object-cover ${isActive ? 'opacity-100' : 'opacity-0'}`}
               />
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                 <div className="w-64 h-80 border-2 border-white/30 rounded-[100px] border-dashed"></div>
-              </div>
+              {!isActive && <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-500"></div>}
+              {isActive && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="w-48 h-64 border-2 border-white/20 rounded-[100px] border-dashed"></div>
+                </div>
+              )}
             </>
           )}
         </div>
 
-        <div className="p-6 flex justify-center bg-slate-800/50">
+        <div className="p-8 flex justify-center bg-slate-900/60">
           <button
             onClick={capturePhoto}
             disabled={!isActive}
-            className="group relative flex items-center justify-center w-16 h-16 bg-white rounded-full transition-transform active:scale-95 disabled:opacity-50"
+            className="w-16 h-16 bg-white rounded-full flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
           >
-            <div className="w-12 h-12 border-2 border-slate-900 rounded-full group-hover:scale-110 transition-transform"></div>
+            <i className="fas fa-camera text-2xl text-slate-900"></i>
           </button>
         </div>
         <canvas ref={canvasRef} className="hidden" />
