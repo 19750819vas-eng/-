@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 interface CameraViewProps {
@@ -32,11 +33,10 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
         
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Важно: на мобильных устройствах требуется play() и playsInline
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play().catch(e => console.error("Ошибка воспроизведения видео:", e));
-            setIsActive(true);
-          };
+          // Попытка воспроизведения сразу
+          videoRef.current.play().catch(e => {
+            console.error("Ошибка авто-воспроизведения:", e);
+          });
         }
       } catch (err: any) {
         console.error("Camera Error:", err);
@@ -52,6 +52,10 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
       }
     };
   }, []);
+
+  const handleCanPlay = () => {
+    setIsActive(true);
+  };
 
   const capturePhoto = useCallback(() => {
     if (videoRef.current && canvasRef.current && isActive) {
@@ -82,7 +86,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
           </button>
         </div>
 
-        <div className="relative aspect-video bg-black flex items-center justify-center">
+        <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
           {error ? (
             <div className="p-10 text-center text-red-400">{error}</div>
           ) : (
@@ -92,12 +96,17 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
                 autoPlay 
                 playsInline 
                 muted 
-                className={`w-full h-full object-cover ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                onCanPlay={handleCanPlay}
+                className={`w-full h-full object-cover transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}
               />
-              {!isActive && <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-500"></div>}
+              {!isActive && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-500"></div>
+                </div>
+              )}
               {isActive && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-48 h-64 border-2 border-white/20 rounded-[100px] border-dashed"></div>
+                  <div className="w-48 h-64 border-2 border-white/20 rounded-[100px] border-dashed shadow-[0_0_0_1000px_rgba(0,0,0,0.5)]"></div>
                 </div>
               )}
             </>
@@ -108,7 +117,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
           <button
             onClick={capturePhoto}
             disabled={!isActive}
-            className="w-16 h-16 bg-white rounded-full flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
+            className="w-16 h-16 bg-white rounded-full flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30 shadow-xl shadow-white/10"
           >
             <i className="fas fa-camera text-2xl text-slate-900"></i>
           </button>
