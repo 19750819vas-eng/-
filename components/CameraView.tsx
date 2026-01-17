@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 interface CameraViewProps {
@@ -17,7 +16,7 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
 
     const startCamera = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setError("Камера не поддерживается вашим браузером. Убедитесь, что используете HTTPS.");
+        setError("Камера не поддерживается вашим браузером.");
         return;
       }
 
@@ -33,14 +32,18 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
         
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Попытка воспроизведения сразу
-          videoRef.current.play().catch(e => {
-            console.error("Ошибка авто-воспроизведения:", e);
-          });
+          // Важно для мобильных: muted + playsInline + явный play
+          videoRef.current.setAttribute('muted', '');
+          videoRef.current.setAttribute('playsinline', '');
+          try {
+            await videoRef.current.play();
+          } catch (playError) {
+            console.error("Play error:", playError);
+          }
         }
       } catch (err: any) {
         console.error("Camera Error:", err);
-        setError("Нет доступа к камере. Проверьте разрешения в браузере.");
+        setError("Нет доступа к камере. Проверьте разрешения.");
       }
     };
 
@@ -102,11 +105,6 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onClose }) => {
               {!isActive && (
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-500"></div>
-                </div>
-              )}
-              {isActive && (
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-48 h-64 border-2 border-white/20 rounded-[100px] border-dashed shadow-[0_0_0_1000px_rgba(0,0,0,0.5)]"></div>
                 </div>
               )}
             </>
