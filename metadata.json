@@ -1,0 +1,7 @@
+{
+  "name": "Copy of AI Psycho-Age Scanner",
+  "description": "An advanced AI-powered tool that analyzes facial features to estimate age and determine psychological personality types using Gemini's vision and reasoning capabilities.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
